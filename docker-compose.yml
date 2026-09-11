@@ -19,7 +19,9 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
     container_name: vinux
     ports:
-      - "${APP_PORT:-3000}:3000"
+      # Only the host side is configurable; 3000 inside the container is on its
+      # own network and clashes with nothing. Override APP_PORT if 3030 is taken.
+      - "${APP_PORT:-3030}:3000"
     environment:
       - PORT=3000
       # - DATABASE_URL=postgres://user:password@host:5432/vinux
