@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Download, Heart, ListMusic, Play, Plus, Trash2, X,
 } from "lucide-react";
 import type { Track } from "@/lib/types";
-import { apiGet } from "@/lib/utils";
+import { useApi } from "@/lib/useApi";
 import { useAppState } from "./app-state";
 import { useLibrary, type PlaylistMeta } from "./library";
 import { usePlayer } from "./player";
@@ -17,10 +17,6 @@ export function LibraryView({ initialTab = "favorites" }: { initialTab?: Tab }) 
   const { t } = useAppState();
   const [tab, setTab] = useState<Tab>(initialTab);
 
-  useEffect(() => {
-    setTab(initialTab);
-  }, [initialTab]);
-
   return (
     <div className="space-y-5">
       <div className="flex gap-2">
@@ -29,7 +25,7 @@ export function LibraryView({ initialTab = "favorites" }: { initialTab?: Tab }) 
             key={k}
             onClick={() => setTab(k)}
             className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition ${
-              tab === k ? "bg-emerald-500 text-black" : "bg-white/5 text-zinc-300 ring-1 ring-white/10 hover:bg-white/10"
+              tab === k ? "bg-accent text-black" : "bg-white/5 text-subdued ring-1 ring-white/10 hover:bg-white/10"
             }`}
           >
             {k === "favorites" && <Heart className="h-4 w-4 fill-current" />}
@@ -59,7 +55,7 @@ function FavoritesTab() {
   return (
     <div>
       {favorites.length === 0 ? (
-        <p className="rounded-2xl bg-white/5 px-5 py-10 text-center text-sm text-zinc-400">
+        <p className="rounded-2xl bg-white/5 px-5 py-10 text-center text-sm text-subdued">
           {t("lib.emptyFavs")}
         </p>
       ) : (
@@ -74,7 +70,7 @@ function FavoritesTab() {
               trailing={
                 <button
                   onClick={() => void toggleFav(tr)}
-                  className="rounded-full p-2 text-zinc-400 hover:bg-rose-500/20 hover:text-rose-400"
+                  className="rounded-full p-2 text-subdued hover:bg-rose-500/20 hover:text-rose-400"
                   title={t("pl.unlike")}
                 >
                   <Heart className="h-4 w-4 fill-current" />
@@ -110,6 +106,7 @@ function PlaylistsTab() {
   if (open) {
     return (
       <PlaylistDetail
+        key={open.id}
         meta={open}
         onBack={() => setOpen(null)}
         onDeleted={() => {
@@ -123,9 +120,9 @@ function PlaylistsTab() {
     <div className="space-y-3">
       <button
         onClick={() => setCreating((c) => !c)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-4 text-sm font-semibold text-zinc-200 hover:bg-white/10"
+        className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-4 text-sm font-semibold text-white hover:bg-white/10"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20 text-accent-bright">
           <Plus className="h-5 w-5" />
         </span>
         {t("lib.newPlaylist")}
@@ -139,16 +136,16 @@ function PlaylistsTab() {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void submit()}
             placeholder={t("lib.namePlaceholder")}
-            className="w-full rounded-xl bg-black/30 px-4 py-2.5 text-sm text-white outline-none ring-1 ring-white/10 placeholder:text-zinc-500"
+            className="w-full rounded-xl bg-black/30 px-4 py-2.5 text-sm text-white outline-none ring-1 ring-white/10 placeholder:text-white/40"
           />
-          <button onClick={() => void submit()} className="rounded-xl bg-emerald-500 px-4 text-sm font-bold text-black hover:bg-emerald-400">
+          <button onClick={() => void submit()} className="rounded-xl bg-accent px-4 text-sm font-bold text-black hover:bg-accent-bright">
             {t("lib.create")}
           </button>
         </div>
       )}
 
       {playlists.length === 0 && !creating ? (
-        <p className="rounded-2xl bg-white/5 px-5 py-8 text-center text-sm text-zinc-400">{t("lib.emptyPls")}</p>
+        <p className="rounded-2xl bg-white/5 px-5 py-8 text-center text-sm text-subdued">{t("lib.emptyPls")}</p>
       ) : (
         playlists.map((pl) => (
           <button
@@ -156,12 +153,12 @@ function PlaylistsTab() {
             onClick={() => setOpen(pl)}
             className="flex w-full items-center gap-3 rounded-2xl bg-white/5 px-4 py-3 text-start ring-1 ring-white/5 transition hover:bg-white/10"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 text-emerald-300">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 text-accent-bright">
               <ListMusic className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-bold text-zinc-100">{pl.name}</span>
-              <span className="text-xs text-zinc-500">
+              <span className="block truncate font-bold text-white">{pl.name}</span>
+              <span className="text-xs text-white/40">
                 {pl.count} {t("lib.tracks")}
               </span>
             </span>
@@ -171,7 +168,7 @@ function PlaylistsTab() {
                 e.stopPropagation();
                 void deletePlaylist(pl.id);
               }}
-              className="rounded-full p-2 text-zinc-500 hover:bg-rose-500/20 hover:text-rose-400"
+              className="rounded-full p-2 text-white/40 hover:bg-rose-500/20 hover:text-rose-400"
               title={t("lib.deletePlaylist")}
             >
               <Trash2 className="h-4 w-4" />
@@ -195,34 +192,36 @@ function PlaylistDetail({
   const { t } = useAppState();
   const { removeFromPlaylist, deletePlaylist } = useLibrary();
   const { playContext, current } = usePlayer();
-  const [tracks, setTracks] = useState<Track[] | null>(null);
+  const { data, error } = useApi<{ tracks: Track[] }>(
+    `/api/playlists/${meta.id}?device=${encodeURIComponent(deviceParam())}`,
+  );
+  const [removed, setRemoved] = useState<string[]>([]);
+  const tracks = useMemo(() => {
+    if (error) return [];
+    if (!data) return null;
+    return data.tracks.filter((tr) => !removed.includes(tr.videoId));
+  }, [data, error, removed]);
 
-  useEffect(() => {
-    let alive = true;
-    setTracks(null);
-    apiGet<{ tracks: Track[] }>(`/api/playlists/${meta.id}?device=${encodeURIComponent(deviceParam())}`)
-      .then((r) => alive && setTracks(r.tracks))
-      .catch(() => alive && setTracks([]));
-    return () => {
-      alive = false;
-    };
-  }, [meta.id]);
+  const remove = (videoId: string) => {
+    setRemoved((prev) => [...prev, videoId]);
+    void removeFromPlaylist(meta.id, videoId);
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="rounded-full bg-white/10 p-2 text-zinc-300 hover:bg-white/20">
+        <button onClick={onBack} className="rounded-full bg-white/10 p-2 text-subdued hover:bg-white/20">
           <X className="h-4 w-4 rtl:rotate-180" />
         </button>
         <div>
           <h2 className="font-extrabold text-white">{meta.name}</h2>
-          <p className="text-xs text-zinc-500">{meta.count} {t("lib.tracks")}</p>
+          <p className="text-xs text-white/40">{meta.count} {t("lib.tracks")}</p>
         </div>
         <div className="ms-auto flex gap-2">
           {tracks && tracks.length > 0 && (
             <button
               onClick={() => playContext(tracks, 0, { type: "playlist", label: meta.name })}
-              className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-emerald-400"
+              className="flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-black hover:bg-accent-bright"
             >
               <Play className="h-3.5 w-3.5 fill-current" /> {t("home.playAll")}
             </button>
@@ -240,9 +239,9 @@ function PlaylistDetail({
         </div>
       </div>
       {!tracks ? (
-        <p className="py-8 text-center text-sm text-zinc-500">{t("st.loading")}</p>
+        <p className="py-8 text-center text-sm text-white/40">{t("st.loading")}</p>
       ) : tracks.length === 0 ? (
-        <p className="rounded-2xl bg-white/5 px-5 py-8 text-center text-sm text-zinc-400">{t("lib.emptyPls")}</p>
+        <p className="rounded-2xl bg-white/5 px-5 py-8 text-center text-sm text-subdued">{t("lib.emptyPls")}</p>
       ) : (
         <div className="space-y-0.5">
           {tracks.map((tr, i) => (
@@ -254,8 +253,9 @@ function PlaylistDetail({
               onPlay={() => playContext(tracks, i, { type: "playlist", label: meta.name })}
               trailing={
                 <button
-                  onClick={() => void removeFromPlaylist(meta.id, tr.videoId)}
-                  className="rounded-full p-2 text-zinc-500 hover:bg-rose-500/20 hover:text-rose-400"
+                  onClick={() => remove(tr.videoId)}
+                  aria-label={t("lib.remove")}
+                  className="rounded-full p-2 text-white/40 hover:bg-rose-500/20 hover:text-rose-400"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -291,7 +291,7 @@ function DownloadsTab() {
         </p>
       )}
       {downloads.length === 0 ? (
-        <p className="rounded-2xl bg-white/5 px-5 py-10 text-center text-sm text-zinc-400">{t("lib.emptyDl")}</p>
+        <p className="rounded-2xl bg-white/5 px-5 py-10 text-center text-sm text-subdued">{t("lib.emptyDl")}</p>
       ) : (
         <div className="space-y-0.5">
           {downloads.map((dl, i) => (
@@ -304,7 +304,7 @@ function DownloadsTab() {
               trailing={
                 <button
                   onClick={() => void removeDownload(dl.track.videoId)}
-                  className="rounded-full p-2 text-zinc-500 hover:bg-rose-500/20 hover:text-rose-400"
+                  className="rounded-full p-2 text-white/40 hover:bg-rose-500/20 hover:text-rose-400"
                   title={t("pl.removeDownload")}
                 >
                   <Trash2 className="h-4 w-4" />

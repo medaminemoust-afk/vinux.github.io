@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Play, Radio } from "lucide-react";
 import type { PlayMode, Track } from "@/lib/types";
 import { REGION_LABEL_KEYS } from "@/lib/pools";
-import { apiGet, cx } from "@/lib/utils";
+import { useApi } from "@/lib/useApi";
+import { cx } from "@/lib/utils";
 import { useAppState } from "./app-state";
 import { usePlayer } from "./player";
 import { ArtistImg, CoverCard, ErrBox, SkeletonCards, useArtistImages } from "./ui";
@@ -13,30 +14,6 @@ interface SectionDef {
   title: string;
   url: string;
   mode: PlayMode;
-}
-
-function useSection(def: SectionDef) {
-  const [tracks, setTracks] = useState<Track[] | null>(null);
-  const [error, setError] = useState(false);
-  const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    setTracks(null);
-    setError(false);
-    apiGet<{ tracks: Track[] }>(def.url)
-      .then((r) => {
-        if (alive) setTracks(r.tracks.slice(0, 20));
-      })
-      .catch(() => {
-        if (alive) setError(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [def.url, nonce]);
-
-  return { tracks, error, retry: () => setNonce((n) => n + 1) };
 }
 
 function TrackSection({
@@ -50,7 +27,8 @@ function TrackSection({
 }) {
   const { t } = useAppState();
   const { playContext } = usePlayer();
-  const { tracks, error, retry } = useSection(def);
+  const { data, error, retry } = useApi<{ tracks: Track[] }>(def.url);
+  const tracks = useMemo(() => data?.tracks.slice(0, 20) ?? null, [data]);
 
   const play = useCallback(
     (start: number) => {
@@ -67,21 +45,21 @@ function TrackSection({
           <button
             onClick={onTitle}
             className={cx(
-              "text-start font-extrabold tracking-tight text-zinc-100 transition hover:text-emerald-300",
+              "text-start font-extrabold tracking-tight text-white transition hover:text-accent-bright",
               highlight ? "text-xl" : "text-lg",
             )}
           >
             {def.title} ↗
           </button>
         ) : (
-          <h2 className={cx("font-extrabold tracking-tight text-zinc-100", highlight ? "text-xl" : "text-lg")}>
+          <h2 className={cx("font-extrabold tracking-tight text-white", highlight ? "text-xl" : "text-lg")}>
             {def.title}
           </h2>
         )}
         {tracks && tracks.length > 0 && (
           <button
             onClick={() => play(0)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-zinc-200 ring-1 ring-white/10 transition hover:bg-emerald-500 hover:text-black"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/8 px-3 py-1.5 text-xs font-bold text-white ring-1 ring-white/10 transition hover:bg-accent hover:text-black"
           >
             <Play className="h-3.5 w-3.5 fill-current" /> {t("home.playAll")}
           </button>
@@ -92,7 +70,7 @@ function TrackSection({
       ) : !tracks ? (
         <SkeletonCards />
       ) : tracks.length === 0 ? (
-        <p className="text-sm text-zinc-500">—</p>
+        <p className="text-sm text-white/40">—</p>
       ) : (
         <div className="scrollbar-none -mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
           {tracks.map((tr, i) => (
@@ -125,9 +103,9 @@ export function Home({
   return (
     <div className="space-y-10">
       <div>
-        <p className="text-sm font-medium text-emerald-400">{t("app.name")} 🎧</p>
+        <p className="text-sm font-medium text-accent-bright">{t("app.name")} 🎧</p>
         <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">{greet}</h1>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-xs text-white/40">
           {regionInfo?.country && regionInfo.country !== "Unknown" ? `${regionInfo.flag} ${regionInfo.country} · ` : ""}
           {t("app.tagline")}
         </p>
@@ -136,7 +114,7 @@ export function Home({
       {/* Your artists — photos */}
       {settings.artists.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-extrabold tracking-tight text-zinc-100">{t("home.yourArtists")}</h2>
+          <h2 className="mb-3 text-lg font-extrabold tracking-tight text-white">{t("home.yourArtists")}</h2>
           <div className="scrollbar-none -mx-1 flex gap-4 overflow-x-auto px-1 pb-2">
             {settings.artists.map((name) => (
               <button
@@ -146,10 +124,10 @@ export function Home({
               >
                 <ArtistImg
                   name={name}
-                  className="h-20 w-20 rounded-full shadow-lg shadow-black/40 ring-2 ring-white/10 transition group-hover:ring-emerald-400"
+                  className="h-20 w-20 rounded-full shadow-lg shadow-black/40 ring-2 ring-white/10 transition group-hover:ring-accent"
                   textClass="text-2xl"
                 />
-                <span className="line-clamp-2 text-xs font-semibold text-zinc-200">{name}</span>
+                <span className="line-clamp-2 text-xs font-semibold text-white">{name}</span>
               </button>
             ))}
           </div>
@@ -203,9 +181,9 @@ export function Home({
       {settings.artists.length === 0 && settings.styles.length === 0 && (
         <button
           onClick={onEditTaste}
-          className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 py-8 text-sm text-zinc-300 transition hover:bg-white/10"
+          className="flex w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-white/5 py-8 text-sm text-subdued transition hover:bg-white/10"
         >
-          <Radio className="h-5 w-5 text-emerald-400" /> {t("nav.editTaste")}
+          <Radio className="h-5 w-5 text-accent-bright" /> {t("nav.editTaste")}
         </button>
       )}
     </div>

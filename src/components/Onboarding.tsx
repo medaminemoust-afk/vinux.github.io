@@ -64,7 +64,7 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
   };
 
   return (
-    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#08080f] text-zinc-100">
+    <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#08080f] text-white">
       <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 py-8">
         <div className="mb-8 flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-lg shadow-emerald-500/30">
@@ -72,19 +72,19 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
           </span>
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">{t("app.name")}</h1>
-            <p className="text-xs text-zinc-400">{t("app.tagline")}</p>
+            <p className="text-xs text-subdued">{t("app.tagline")}</p>
           </div>
           <div className="ms-auto flex items-center gap-1">
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
-                className={cx("h-1.5 rounded-full transition-all", i === step ? "w-6 bg-emerald-400" : "w-1.5 bg-white/20")}
+                className={cx("h-1.5 rounded-full transition-all", i === step ? "w-6 bg-accent-bright" : "w-1.5 bg-white/20")}
               />
             ))}
             {onCancel && settings.onboarded && (
               <button
                 onClick={onCancel}
-                className="ms-3 rounded-full bg-white/10 p-2 text-zinc-300 hover:bg-white/20"
+                className="ms-3 rounded-full bg-white/10 p-2 text-subdued hover:bg-white/20"
                 title={t("common.close")}
               >
                 <X className="h-4 w-4" />
@@ -97,7 +97,7 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
         {step === 0 && (
           <div className="my-auto">
             <h2 className="text-3xl font-extrabold">{t("ob.chooseLang")}</h2>
-            <p className="mt-2 text-zinc-400">{t("ob.subtitle")}</p>
+            <p className="mt-2 text-subdued">{t("ob.subtitle")}</p>
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {LANGS.map((l) => (
                 <button
@@ -106,19 +106,19 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
                   className={cx(
                     "flex items-center gap-4 rounded-2xl border p-4 text-start transition",
                     lang === l.code
-                      ? "border-emerald-400/60 bg-emerald-400/10"
+                      ? "border-accent/60 bg-accent-bright/10"
                       : "border-white/10 bg-white/5 hover:bg-white/10",
                   )}
                 >
                   <span className="text-3xl">{l.flag}</span>
                   <span className="text-lg font-bold">{l.label}</span>
-                  {lang === l.code && <Check className="ms-auto h-5 w-5 text-emerald-400" />}
+                  {lang === l.code && <Check className="ms-auto h-5 w-5 text-accent-bright" />}
                 </button>
               ))}
             </div>
             <button
               onClick={() => setStep(1)}
-              className="mt-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-base font-bold text-black transition hover:bg-emerald-400"
+              className="mt-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-4 text-base font-bold text-black transition hover:bg-accent-bright"
             >
               {t("ob.continue")} <ChevronRight className="h-5 w-5 rtl:rotate-180" />
             </button>
@@ -129,10 +129,10 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
         {step === 1 && (
           <div>
             <h2 className="text-2xl font-extrabold sm:text-3xl">{t("ob.regionTitle")}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{t("ob.regionHint")}</p>
+            <p className="mt-2 text-sm text-subdued">{t("ob.regionHint")}</p>
             {regionInfo?.country && detectedKey && detectedKey !== "global" && (
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-300 ring-1 ring-white/10">
-                <Globe2 className="h-3.5 w-3.5 text-emerald-400" />
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-subdued ring-1 ring-white/10">
+                <Globe2 className="h-3.5 w-3.5 text-accent-bright" />
                 {t("ob.detected")}: {regionInfo.flag} {regionInfo.country}
               </div>
             )}
@@ -148,8 +148,8 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
                   className={cx(
                     "shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition",
                     region === key
-                      ? "bg-emerald-500 text-black"
-                      : "bg-white/5 text-zinc-300 ring-1 ring-white/10 hover:bg-white/10",
+                      ? "bg-accent text-black"
+                      : "bg-white/5 text-subdued ring-1 ring-white/10 hover:bg-white/10",
                   )}
                 >
                   {key === "global" ? t("region.global") : t(REGION_LABEL_KEYS[key] || "region.global")}
@@ -157,9 +157,9 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
               ))}
             </div>
 
-            <p className="mt-5 text-sm text-zinc-400">
+            <p className="mt-5 text-sm text-subdued">
               {t("ob.pickArtists")}{" "}
-              <span className="text-emerald-400">
+              <span className="text-accent-bright">
                 {artists.length}/5
               </span>
             </p>
@@ -173,7 +173,7 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
                     className={cx(
                       "flex flex-col items-center gap-2 rounded-2xl p-3 text-center transition ring-1",
                       sel
-                        ? "bg-emerald-400/10 ring-emerald-400/70"
+                        ? "bg-accent-bright/10 ring-accent/70"
                         : "bg-white/5 ring-white/5 hover:bg-white/10",
                     )}
                   >
@@ -183,7 +183,7 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
                         className="h-16 w-16 rounded-full shadow-lg"
                       />
                       {sel && (
-                        <span className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-black ring-2 ring-[#08080f]">
+                        <span className="absolute -bottom-1 -end-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-black ring-2 ring-[#08080f]">
                           <Check className="h-3.5 w-3.5" />
                         </span>
                       )}
@@ -195,12 +195,12 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
             </div>
 
             <div className="mt-8 flex items-center justify-between gap-3">
-              <button onClick={() => setStep(0)} className="rounded-xl px-4 py-3 text-sm font-semibold text-zinc-400 hover:text-white">
+              <button onClick={() => setStep(0)} className="rounded-xl px-4 py-3 text-sm font-semibold text-subdued hover:text-white">
                 ←
               </button>
               <button
                 onClick={() => setStep(2)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-3.5 font-bold text-black transition hover:bg-emerald-400"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-accent py-3.5 font-bold text-black transition hover:bg-accent-bright"
               >
                 {t("ob.continue")} <ChevronRight className="h-5 w-5 rtl:rotate-180" />
               </button>
@@ -212,7 +212,7 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
         {step === 2 && (
           <div className="my-auto">
             <h2 className="text-2xl font-extrabold sm:text-3xl">{t("ob.pickStyles")}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{t("ob.stylesHint")}</p>
+            <p className="mt-2 text-sm text-subdued">{t("ob.stylesHint")}</p>
             <div className="mt-8 flex flex-wrap gap-2.5">
               {STYLES.map((s) => {
                 const sel = styles.includes(s.key);
@@ -223,8 +223,8 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
                     className={cx(
                       "flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition ring-1",
                       sel
-                        ? "bg-emerald-500 text-black ring-emerald-400"
-                        : "bg-white/5 text-zinc-200 ring-white/10 hover:bg-white/10",
+                        ? "bg-accent text-black ring-accent"
+                        : "bg-white/5 text-white ring-white/10 hover:bg-white/10",
                     )}
                   >
                     <span>{s.emoji}</span>
@@ -236,7 +236,7 @@ export function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?
             </div>
             <button
               onClick={finish}
-              className="mt-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-base font-bold text-black transition hover:bg-emerald-400"
+              className="mt-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-4 text-base font-bold text-black transition hover:bg-accent-bright"
             >
               <Music2 className="h-5 w-5" /> {t("ob.finish")}
             </button>

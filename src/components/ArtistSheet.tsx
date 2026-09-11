@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { Play, Radio, X } from "lucide-react";
 import type { Track } from "@/lib/types";
-import { apiGet } from "@/lib/utils";
+import { useApi } from "@/lib/useApi";
 import { useAppState } from "./app-state";
 import { usePlayer } from "./player";
 import { ArtistImg, ErrBox, RowSong, Spinner } from "./ui";
@@ -17,21 +17,10 @@ export function ArtistSheet({
 }) {
   const { t } = useAppState();
   const { playContext } = usePlayer();
-  const [tracks, setTracks] = useState<Track[] | null>(null);
-  const [err, setErr] = useState(false);
-  const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    setTracks(null);
-    setErr(false);
-    apiGet<{ tracks: Track[] }>(`/api/songs?artist=${encodeURIComponent(name)}`)
-      .then((r) => alive && setTracks(r.tracks))
-      .catch(() => alive && setErr(true));
-    return () => {
-      alive = false;
-    };
-  }, [name, nonce]);
+  const { data, error: err, retry } = useApi<{ tracks: Track[] }>(
+    `/api/songs?artist=${encodeURIComponent(name)}`,
+  );
+  const tracks = data?.tracks ?? null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -57,18 +46,18 @@ export function ArtistSheet({
             <ArtistImg name={name} className="h-16 w-16 rounded-2xl shadow-lg" />
             <div>
               <h2 className="text-xl font-extrabold text-white">{name}</h2>
-              <p className="text-xs text-zinc-400">{t("pl.artistRadio")}</p>
+              <p className="text-xs text-subdued">{t("pl.artistRadio")}</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-full bg-white/10 p-2 text-zinc-300 hover:bg-white/20">
+          <button onClick={onClose} className="rounded-full bg-white/10 p-2 text-subdued hover:bg-white/20">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {err ? (
-          <ErrBox label={t("home.loadFailed")} onRetry={() => setNonce((n) => n + 1)} />
+          <ErrBox label={t("home.loadFailed")} onRetry={retry} />
         ) : !tracks ? (
-          <div className="flex justify-center py-10 text-zinc-400">
+          <div className="flex justify-center py-10 text-subdued">
             <Spinner />
           </div>
         ) : (
@@ -76,7 +65,7 @@ export function ArtistSheet({
             <div className="mb-3 flex gap-2">
               <button
                 onClick={() => play(tracks, 0, false)}
-                className="flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400"
+                className="flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-bold text-black hover:bg-accent-bright"
               >
                 <Play className="h-4 w-4 fill-current" /> {t("home.playAll")}
               </button>

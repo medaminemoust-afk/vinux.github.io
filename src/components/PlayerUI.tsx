@@ -1,64 +1,189 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   ChevronDown, Download, Heart, ListMusic, Loader2, Mic2, Pause,
-  Play, Plus, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, X,
+  Play, Plus, Repeat, Repeat1, Shuffle, SkipBack, SkipForward,
+  Volume1, Volume2, VolumeX, X,
 } from "lucide-react";
 import type { Track } from "@/lib/types";
-import { apiGet, cx, fmtTime, parseSyncedLyrics, type LyricLine } from "@/lib/utils";
+import { useApi } from "@/lib/useApi";
+import { cx, fmtTime, parseSyncedLyrics } from "@/lib/utils";
 import { useAppState, useToast } from "./app-state";
 import { useLibrary } from "./library";
 import { usePlayer } from "./player";
 import { bgStyle, RowSong, Spinner } from "./ui";
 
+/* ================= Shared bits ================= */
+
+/** Range input whose filled portion is driven by a CSS var (see globals.css). */
+function Bar({
+  value,
+  max,
+  onChange,
+  className,
+  label,
+  step = 1,
+}: {
+  value: number;
+  max: number;
+  onChange: (v: number) => void;
+  className?: string;
+  label: string;
+  step?: number;
+}) {
+  const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+  return (
+    <input
+      type="range"
+      min={0}
+      max={max}
+      step={step}
+      value={value}
+      aria-label={label}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+      className={cx("bar", className)}
+      style={{ "--pct": `${pct}%` } as CSSProperties}
+    />
+  );
+}
+
+function VolumeControl() {
+  const { t } = useAppState();
+  const { volume, muted, setVolume, toggleMute } = usePlayer();
+  const Icon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={toggleMute}
+        className="text-subdued transition hover:text-white"
+        aria-label={muted ? t("pl.unmute") : t("pl.mute")}
+        title={muted ? t("pl.unmute") : t("pl.mute")}
+      >
+        <Icon className="h-5 w-5" />
+      </button>
+      <Bar
+        label={t("pl.volume")}
+        value={muted ? 0 : volume}
+        max={1}
+        step={0.01}
+        onChange={setVolume}
+        className="w-24"
+      />
+    </div>
+  );
+}
+
 /* ================= Player bottom bar ================= */
 
 export function PlayerBar({ onOpen }: { onOpen: () => void }) {
   const { t } = useAppState();
-  const { current, playing, loading, toggle, next, curTime, duration } = usePlayer();
+  const {
+    current, playing, loading, toggle, next, prev, curTime, duration, seek,
+    shuffle, toggleShuffle, repeat, cycleRepeat,
+  } = usePlayer();
   const { isFav, toggleFav, isDl, download, downloading } = useLibrary();
   const { push } = useToast();
 
   if (!current) return null;
-  const pct = duration > 0 ? (curTime / duration) * 100 : 0;
+
+  const fav = isFav(current.videoId);
+  const like = () => {
+    void toggleFav(current).then(() => push(fav ? t("pl.removedFav") : t("pl.addedFav")));
+  };
 
   return (
-    <div className="fixed inset-x-0 bottom-16 z-40 px-2 pb-1 sm:px-4 md:bottom-0 md:pb-3">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-white/10 bg-[#14141f]/95 shadow-2xl shadow-black/60 backdrop-blur-xl">
-        <div className="h-0.5 w-full bg-white/5">
-          <div className="h-full bg-emerald-400 transition-[width] duration-300" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex items-center gap-3 px-3 py-2">
-          <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-start">
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/10">
-              <img src={current.thumbnail} alt="" className="h-full w-full object-cover" />
+    <div className="shrink-0 border-t border-line bg-chrome px-4 py-2.5">
+      <div className="flex items-center gap-4">
+        {/* Left — track */}
+        <div className="flex min-w-0 flex-1 items-center gap-3 md:w-[30%] md:flex-none">
+          <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-start" aria-label={t("pl.nowPlaying")}>
+            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded bg-white/10">
+              <img src={current.thumbnail} alt="" className="yt-thumb h-full w-full" />
               {loading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
                   <Spinner className="h-4 w-4 text-white" />
                 </div>
               )}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-bold text-white">{current.title}</div>
-              <div className="truncate text-xs text-zinc-400">{current.artist}</div>
+              <div className="truncate text-sm font-medium text-white">{current.title}</div>
+              <div className="truncate text-xs text-subdued">{current.artist}</div>
             </div>
           </button>
 
           <button
-            onClick={() => {
-              const was = isFav(current.videoId);
-              void toggleFav(current).then(() => push(was ? t("pl.removedFav") : t("pl.addedFav")));
-            }}
-            className={cx(
-              "hidden rounded-full p-2.5 transition sm:block",
-              isFav(current.videoId) ? "text-emerald-400" : "text-zinc-400 hover:text-white",
-            )}
-            title={t("pl.like")}
+            onClick={like}
+            className={cx("hidden shrink-0 p-2 transition sm:block", fav ? "text-accent-bright" : "text-subdued hover:text-white")}
+            aria-label={fav ? t("pl.unlike") : t("pl.like")}
+            title={fav ? t("pl.unlike") : t("pl.like")}
           >
-            <Heart className={cx("h-5 w-5", isFav(current.videoId) && "fill-current")} />
+            <Heart className={cx("h-4 w-4", fav && "fill-current")} />
           </button>
+        </div>
 
+        {/* Center — transport + seek */}
+        <div className="flex flex-col items-center gap-1 md:flex-1">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button
+              onClick={toggleShuffle}
+              className={cx("hidden transition md:block", shuffle ? "text-accent-bright" : "text-subdued hover:text-white")}
+              aria-label={t("pl.shuffle")}
+              aria-pressed={shuffle}
+              title={shuffle ? t("pl.shuffleOn") : t("pl.shuffle")}
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <button
+              onClick={prev}
+              className="hidden text-subdued transition hover:text-white sm:block"
+              aria-label={t("pl.prev")}
+              title={t("pl.prev")}
+            >
+              <SkipBack className="h-5 w-5 fill-current" />
+            </button>
+            <button
+              onClick={toggle}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"
+              aria-label={playing ? t("pl.pause") : t("pl.play")}
+              title={playing ? t("pl.pause") : t("pl.play")}
+            >
+              {playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ms-0.5 h-4 w-4 fill-current" />}
+            </button>
+            <button
+              onClick={() => next(false)}
+              className="text-subdued transition hover:text-white"
+              aria-label={t("pl.next")}
+              title={t("pl.next")}
+            >
+              <SkipForward className="h-5 w-5 fill-current" />
+            </button>
+            <button
+              onClick={cycleRepeat}
+              className={cx("hidden transition md:block", repeat !== "off" ? "text-accent-bright" : "text-subdued hover:text-white")}
+              aria-label={t("pl.repeat")}
+              title={t("pl.repeat")}
+            >
+              {repeat === "one" ? <Repeat1 className="h-4 w-4" /> : <Repeat className="h-4 w-4" />}
+            </button>
+          </div>
+
+          <div className="hidden w-full max-w-xl items-center gap-2 md:flex">
+            <span className="w-10 text-end text-[11px] tabular-nums text-subdued">{fmtTime(curTime)}</span>
+            <Bar
+              label={t("pl.seek")}
+              value={Math.min(curTime, duration || 0)}
+              max={Math.max(duration, 1)}
+              step={0.5}
+              onChange={seek}
+              className="flex-1"
+            />
+            <span className="w-10 text-[11px] tabular-nums text-subdued">{fmtTime(duration)}</span>
+          </div>
+        </div>
+
+        {/* Right — download + volume */}
+        <div className="hidden items-center justify-end gap-3 md:flex md:w-[30%]">
           {!isDl(current.videoId) ? (
             <button
               onClick={() => {
@@ -67,31 +192,31 @@ export function PlayerBar({ onOpen }: { onOpen: () => void }) {
                   .then(() => push(t("pl.downloadDone")))
                   .catch(() => push(t("pl.downloadErr"), "err"));
               }}
-              className="hidden rounded-full p-2.5 text-zinc-400 transition hover:text-white sm:block"
+              className="text-subdued transition hover:text-white"
+              aria-label={t("pl.download")}
               title={t("pl.download")}
             >
               {downloading.has(current.videoId) ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Download className="h-5 w-5" />
+                <Download className="h-4 w-4" />
               )}
             </button>
           ) : (
-            <span className="hidden rounded-full p-2.5 text-emerald-400 sm:block" title={t("pl.downloaded")}>
-              <Download className="h-5 w-5" />
+            <span className="text-accent-bright" title={t("pl.downloaded")}>
+              <Download className="h-4 w-4" />
             </span>
           )}
-
-          <button
-            onClick={toggle}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:scale-105"
-          >
-            {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ms-0.5 h-5 w-5 fill-current" />}
-          </button>
-          <button onClick={() => next(false)} className="shrink-0 rounded-full p-2.5 text-zinc-200 hover:text-white">
-            <SkipForward className="h-5 w-5" />
-          </button>
+          <VolumeControl />
         </div>
+      </div>
+
+      {/* Mobile progress hairline */}
+      <div className="mt-2 h-0.5 w-full bg-white/20 md:hidden">
+        <div
+          className="h-full bg-white transition-[width] duration-300"
+          style={{ width: `${duration > 0 ? (curTime / duration) * 100 : 0}%` }}
+        />
       </div>
     </div>
   );
@@ -161,8 +286,8 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
           <ChevronDown className="h-5 w-5 rtl:rotate-90" />
         </button>
         <div className="min-w-0 flex-1 text-center">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-300">{t("pl.nowPlaying")}</p>
-          <p className="truncate text-xs text-zinc-300">{modeLabel}</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-accent-bright">{t("pl.nowPlaying")}</p>
+          <p className="truncate text-xs text-subdued">{modeLabel}</p>
         </div>
         <div className="w-9" />
       </div>
@@ -174,13 +299,8 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
           <LyricPanel track={current} curTime={curTime} onBack={() => setPanel("none")} />
         ) : (
           <div className="relative">
-            <div
-              className={cx(
-                "h-60 w-60 overflow-hidden rounded-3xl shadow-2xl shadow-black/60 ring-1 ring-white/15 sm:h-80 sm:w-80",
-                playing && "animate-disc-spin-slow",
-              )}
-            >
-              <img src={current.thumbnail} alt={current.title} className="h-full w-full object-cover" />
+            <div className="h-60 w-60 overflow-hidden rounded-lg shadow-2xl shadow-black/60 sm:h-80 sm:w-80">
+              <img src={current.thumbnail} alt={current.title} className="yt-thumb h-full w-full" />
             </div>
             {playing && (
               <div className="absolute -bottom-3 left-1/2 flex h-8 -translate-x-1/2 items-end gap-0.5 rounded-full bg-black/50 px-3 py-1.5 backdrop-blur">
@@ -195,22 +315,21 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
         {panel !== "lyrics" && (
           <div className="w-full max-w-md text-center">
             <h2 className="truncate text-xl font-extrabold">{current.title}</h2>
-            <p className="truncate text-sm text-zinc-300">{current.artist}</p>
+            <p className="truncate text-sm text-subdued">{current.artist}</p>
           </div>
         )}
 
         {/* seek */}
         <div className="w-full max-w-md">
-          <input
-            type="range"
-            min={0}
+          <Bar
+            label={t("pl.seek")}
+            value={Math.min(curTime, duration || 0)}
             max={Math.max(duration, 1)}
             step={0.5}
-            value={Math.min(curTime, duration || 0)}
-            onChange={(e) => seek(parseFloat(e.target.value))}
-            className="seek w-full"
+            onChange={seek}
+            className="w-full"
           />
-          <div className="flex justify-between text-[11px] tabular-nums text-zinc-400">
+          <div className="flex justify-between text-[11px] tabular-nums text-subdued">
             <span>{fmtTime(curTime)}</span>
             <span>{offlineDl ? "⬇ " : ""}{fmtTime(duration)}</span>
           </div>
@@ -220,12 +339,12 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
         <div className="flex w-full max-w-md items-center justify-between gap-2">
           <button
             onClick={toggleShuffle}
-            className={cx("rounded-full p-3 transition", shuffle ? "text-emerald-400" : "text-zinc-400 hover:text-white")}
+            className={cx("rounded-full p-3 transition", shuffle ? "text-accent-bright" : "text-subdued hover:text-white")}
             title={shuffle ? t("pl.shuffleOn") : t("pl.shuffle")}
           >
             <Shuffle className="h-5 w-5" />
           </button>
-          <button onClick={() => player.prev()} className="rounded-full p-3 text-zinc-200 hover:text-white">
+          <button onClick={() => player.prev()} className="rounded-full p-3 text-white hover:text-white">
             <SkipBack className="h-7 w-7" />
           </button>
           <button
@@ -234,12 +353,12 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
           >
             {playing ? <Pause className="h-7 w-7 fill-current" /> : <Play className="ms-1 h-7 w-7 fill-current" />}
           </button>
-          <button onClick={() => player.next(false)} className="rounded-full p-3 text-zinc-200 hover:text-white">
+          <button onClick={() => player.next(false)} className="rounded-full p-3 text-white hover:text-white">
             <SkipForward className="h-7 w-7" />
           </button>
           <button
             onClick={cycleRepeat}
-            className={cx("rounded-full p-3", repeat !== "off" ? "text-emerald-400" : "text-zinc-400 hover:text-white")}
+            className={cx("rounded-full p-3", repeat !== "off" ? "text-accent-bright" : "text-subdued hover:text-white")}
             title={t("pl.repeat")}
           >
             {repeat === "one" ? <Repeat1 className="h-5 w-5" /> : <Repeat className="h-5 w-5" />}
@@ -253,9 +372,9 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
               const was = isF;
               void toggleFav(current).then(() => push(was ? t("pl.removedFav") : t("pl.addedFav")));
             }}
-            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-zinc-300"
+            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-subdued"
           >
-            <Heart className={cx("h-6 w-6", isF ? "fill-current text-emerald-400" : "text-zinc-300")} />
+            <Heart className={cx("h-6 w-6", isF ? "fill-current text-accent-bright" : "text-subdued")} />
             {isF ? t("pl.unlike") : t("pl.like")}
           </button>
           <button
@@ -265,12 +384,12 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
                 .then(() => push(t("pl.downloadDone")))
                 .catch(() => push(t("pl.downloadErr"), "err"));
             }}
-            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-zinc-300"
+            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-subdued"
           >
             {downloading.has(current.videoId) ? (
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-accent-bright" />
             ) : isDownloaded ? (
-              <Download className="h-6 w-6 text-emerald-400" />
+              <Download className="h-6 w-6 text-accent-bright" />
             ) : (
               <Download className="h-6 w-6" />
             )}
@@ -278,21 +397,21 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
           </button>
           <button
             onClick={() => setPicker(true)}
-            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-zinc-300"
+            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-subdued"
           >
             <Plus className="h-6 w-6" />
             {t("pl.addToPlaylist")}
           </button>
           <button
             onClick={() => setPanel(panel === "lyrics" ? "none" : "lyrics")}
-            className={cx("flex flex-col items-center gap-1 text-[10px] font-semibold", panel === "lyrics" ? "text-emerald-400" : "text-zinc-300")}
+            className={cx("flex flex-col items-center gap-1 text-[10px] font-semibold", panel === "lyrics" ? "text-accent-bright" : "text-subdued")}
           >
             <Mic2 className="h-6 w-6" />
             {t("pl.lyrics")}
           </button>
           <button
             onClick={() => setPanel(panel === "queue" ? "none" : "queue")}
-            className={cx("flex flex-col items-center gap-1 text-[10px] font-semibold", panel === "queue" ? "text-emerald-400" : "text-zinc-300")}
+            className={cx("flex flex-col items-center gap-1 text-[10px] font-semibold", panel === "queue" ? "text-accent-bright" : "text-subdued")}
           >
             <ListMusic className="h-6 w-6" />
             {t("pl.queue")}
@@ -305,7 +424,7 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
         <div className="mx-auto mb-6 w-full max-w-2xl rounded-3xl bg-black/60 p-4 backdrop-blur-xl ring-1 ring-white/10">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="font-bold">{t("pl.queue")}</h3>
-            <button onClick={() => setPanel("none")} className="text-zinc-400 hover:text-white"><X className="h-4 w-4" /></button>
+            <button onClick={() => setPanel("none")} className="text-subdued hover:text-white"><X className="h-4 w-4" /></button>
           </div>
           <div className="max-h-56 space-y-0.5 overflow-y-auto">
             {queue.map((tr, i) => (
@@ -317,7 +436,7 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
                 onPlay={() => player.playContext(queue, i, mode)}
               />
             ))}
-            {queue.length === 0 && <p className="py-4 text-center text-xs text-zinc-500">—</p>}
+            {queue.length === 0 && <p className="py-4 text-center text-xs text-white/40">—</p>}
           </div>
         </div>
       )}
@@ -325,17 +444,17 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
       {/* playlist picker */}
       {picker && (
         <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center" onClick={() => setPicker(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-t-3xl bg-[#16161f] p-5 ring-1 ring-white/10 sm:rounded-3xl">
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-t-3xl bg-elevated p-5 ring-1 ring-white/10 sm:rounded-3xl">
             <h3 className="mb-3 font-bold">{t("pl.choosePlaylist")}</h3>
             <div className="max-h-60 space-y-1 overflow-y-auto">
               {playlists.map((pl) => (
                 <button
                   key={pl.id}
                   onClick={() => void addPl(pl.id)}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-start text-sm font-semibold text-zinc-100 hover:bg-white/10"
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-start text-sm font-semibold text-white hover:bg-white/10"
                 >
                   <span className="truncate">{pl.name}</span>
-                  <span className="text-xs text-zinc-500">{pl.count}</span>
+                  <span className="text-xs text-white/40">{pl.count}</span>
                 </button>
               ))}
             </div>
@@ -345,9 +464,9 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setNewPlName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && void createAndAdd()}
                 placeholder={t("lib.namePlaceholder")}
-                className="w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm text-white outline-none ring-1 ring-white/10 placeholder:text-zinc-500"
+                className="w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm text-white outline-none ring-1 ring-white/10 placeholder:text-white/40"
               />
-              <button onClick={() => void createAndAdd()} className="shrink-0 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-black hover:bg-emerald-400">
+              <button onClick={() => void createAndAdd()} className="shrink-0 rounded-xl bg-accent px-4 text-sm font-bold text-black hover:bg-accent-bright">
                 {t("lib.create")}
               </button>
             </div>
@@ -362,37 +481,21 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
 
 function LyricPanel({ track, curTime, onBack }: { track: Track; curTime: number; onBack: () => void }) {
   const { t } = useAppState();
-  const [state, setState] = useState<{ synced: LyricLine[] | null; plain: string | null; loading: boolean }>({
-    synced: null,
-    plain: null,
-    loading: true,
-  });
+  const { data, error, loading } = useApi<{ synced: string | null; plain: string | null }>(
+    `/api/lyrics?artist=${encodeURIComponent(track.artist)}&title=${encodeURIComponent(track.title)}`,
+  );
 
-  useEffect(() => {
-    let alive = true;
-    setState({ synced: null, plain: null, loading: true });
-    apiGet<{ synced: string | null; plain: string | null }>(
-      `/api/lyrics?artist=${encodeURIComponent(track.artist)}&title=${encodeURIComponent(track.title)}`,
-    )
-      .then((r) => {
-        if (!alive) return;
-        if (r.synced) {
-          const lines = parseSyncedLyrics(r.synced);
-          setState({ synced: lines.length ? lines : null, plain: r.plain, loading: false });
-        } else {
-          setState({ synced: null, plain: r.plain, loading: false });
-        }
-      })
-      .catch(() => alive && setState({ synced: null, plain: null, loading: false }));
-    return () => {
-      alive = false;
-    };
-  }, [track.videoId, track.artist, track.title]);
+  const synced = useMemo(() => {
+    if (!data?.synced) return null;
+    const lines = parseSyncedLyrics(data.synced);
+    return lines.length ? lines : null;
+  }, [data]);
+  const plain = error ? null : data?.plain ?? null;
 
   let activeIdx = -1;
-  if (state.synced) {
-    for (let i = 0; i < state.synced.length; i++) {
-      if (state.synced[i].time <= curTime + 0.3) activeIdx = i;
+  if (synced) {
+    for (let i = 0; i < synced.length; i++) {
+      if (synced[i].time <= curTime + 0.3) activeIdx = i;
       else break;
     }
   }
@@ -401,29 +504,29 @@ function LyricPanel({ track, curTime, onBack }: { track: Track; curTime: number;
     <div className="flex h-[26rem] w-full max-w-lg flex-col rounded-3xl bg-black/50 backdrop-blur-xl ring-1 ring-white/10">
       <div className="flex items-center justify-between px-5 py-3">
         <h3 className="font-bold">{t("pl.lyrics")}</h3>
-        <button onClick={onBack} className="text-zinc-400 hover:text-white"><X className="h-4 w-4" /></button>
+        <button onClick={onBack} className="text-subdued hover:text-white"><X className="h-4 w-4" /></button>
       </div>
       <div className="scrollbar-thin flex-1 overflow-y-auto px-5 pb-5">
-        {state.loading ? (
-          <div className="flex h-full items-center justify-center text-zinc-400"><Spinner /></div>
-        ) : state.synced ? (
+        {loading ? (
+          <div className="flex h-full items-center justify-center text-subdued"><Spinner /></div>
+        ) : synced ? (
           <div className="space-y-2.5 text-center">
-            {state.synced.map((l, i) => (
+            {synced.map((l, i) => (
               <p
                 key={i}
                 className={cx(
                   "text-sm leading-relaxed transition-all",
-                  i === activeIdx ? "scale-105 text-emerald-300" : i < activeIdx ? "text-zinc-500" : "text-zinc-300/70",
+                  i === activeIdx ? "scale-105 text-accent-bright" : i < activeIdx ? "text-white/40" : "text-subdued/70",
                 )}
               >
                 {l.text}
               </p>
             ))}
           </div>
-        ) : state.plain ? (
-          <p className="whitespace-pre-line text-center text-sm leading-relaxed text-zinc-200">{state.plain}</p>
+        ) : plain ? (
+          <p className="whitespace-pre-line text-center text-sm leading-relaxed text-white">{plain}</p>
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-zinc-500">{t("pl.noLyrics")}</div>
+          <div className="flex h-full items-center justify-center text-sm text-white/40">{t("pl.noLyrics")}</div>
         )}
       </div>
     </div>

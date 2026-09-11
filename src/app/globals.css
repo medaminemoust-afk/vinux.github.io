@@ -1,14 +1,28 @@
 @import "tailwindcss";
 
+/* Spotify-style palette: near-black chrome, #121212 stage, one green accent. */
+@theme {
+  --color-base: #121212;
+  --color-chrome: #000000;
+  --color-card: #181818;
+  --color-card-hover: #282828;
+  --color-elevated: #242424;
+  --color-line: #2a2a2a;
+  --color-accent: #1db954;
+  --color-accent-bright: #1ed760;
+  --color-subdued: #a7a7a7;
+}
+
 :root {
   color-scheme: dark;
 }
 
 html,
 body {
-  background: #0a0a12;
-  color: #f4f4f5;
+  background: var(--color-chrome);
+  color: #fff;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 /* hide scrollbars on horizontal rails */
@@ -20,7 +34,28 @@ body {
 }
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 12px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* YouTube's hqdefault is a 480x360 canvas with the real 16:9 frame letterboxed
+   inside it, so plain object-cover keeps the black bars. Scaling by 360/270
+   pushes them outside the box and leaves only the frame. Track artwork only —
+   artist photos come from elsewhere and must not be cropped. */
+.yt-thumb {
+  object-fit: cover;
+  transform: scale(1.3334);
 }
 
 /* toasts */
@@ -38,27 +73,13 @@ body {
   animation: toast-in 0.25s ease-out;
 }
 
-/* artwork "breathing" while playing */
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.025);
-  }
-}
-.animate-disc-spin-slow {
-  animation: breathe 6s ease-in-out infinite;
-}
-
 /* equalizer bars */
 .eq-bar {
   display: block;
   width: 3px;
   height: 6px;
   border-radius: 2px;
-  background: #34d399;
+  background: var(--color-accent-bright);
   animation: eq 0.7s ease-in-out infinite alternate;
 }
 @keyframes eq {
@@ -70,35 +91,83 @@ body {
   }
 }
 
-/* seek slider */
-input[type="range"].seek {
+/* Range inputs (seek + volume). The filled portion is driven by --pct, set
+   inline by the component, so the track colours itself without a second element. */
+input[type="range"].bar {
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.22);
+  height: 12px;
+  background: transparent;
   outline: none;
   cursor: pointer;
 }
-input[type="range"].seek::-webkit-slider-thumb {
+input[type="range"].bar::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #fff 0%,
+    #fff var(--pct, 0%),
+    rgba(255, 255, 255, 0.3) var(--pct, 0%),
+    rgba(255, 255, 255, 0.3) 100%
+  );
+}
+input[type="range"].bar:hover::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--color-accent-bright) 0%,
+    var(--color-accent-bright) var(--pct, 0%),
+    rgba(255, 255, 255, 0.3) var(--pct, 0%),
+    rgba(255, 255, 255, 0.3) 100%
+  );
+}
+input[type="range"].bar::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  margin-top: -4px;
+  width: 12px;
+  height: 12px;
   border-radius: 9999px;
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.35);
+  opacity: 0;
+  transition: opacity 0.12s;
 }
-input[type="range"].seek::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+input[type="range"].bar:hover::-webkit-slider-thumb,
+input[type="range"].bar:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+input[type="range"].bar::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.3);
+}
+input[type="range"].bar::-moz-range-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: #fff;
+}
+input[type="range"].bar:hover::-moz-range-progress {
+  background: var(--color-accent-bright);
+}
+input[type="range"].bar::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
   border: 0;
   border-radius: 9999px;
   background: #fff;
-  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.35);
+  opacity: 0;
+  transition: opacity 0.12s;
 }
-input[type="range"].seek::-moz-range-track {
-  height: 4px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.22);
+input[type="range"].bar:hover::-moz-range-thumb {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -28,11 +28,15 @@ interface PlayerCtx {
   mode: PlayMode;
   shuffle: boolean;
   repeat: RepeatMode;
+  volume: number;
+  muted: boolean;
   playContext: (tracks: Track[], start: number, mode: PlayMode, opts?: { shuffleOn?: boolean }) => void;
   toggle: () => void;
   next: (auto?: boolean) => void;
   prev: () => void;
   seek: (s: number) => void;
+  setVolume: (v: number) => void;
+  toggleMute: () => void;
   toggleShuffle: () => void;
   cycleRepeat: () => void;
 }
@@ -50,11 +54,15 @@ const PlayerContext = createContext<PlayerCtx>({
   mode: { type: "mix", label: "" },
   shuffle: true,
   repeat: "all",
+  volume: 1,
+  muted: false,
   playContext: noop,
   toggle: noop,
   next: noop,
   prev: noop,
   seek: noop,
+  setVolume: noop,
+  toggleMute: noop,
   toggleShuffle: noop,
   cycleRepeat: noop,
 });
@@ -79,22 +87,47 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<PlayMode>({ type: "mix", label: "" });
   const [shuffle, setShuffle] = useState(true); // "next music random" by default
   const [repeat, setRepeat] = useState<RepeatMode>("all");
+  // Read straight from storage: the bar only mounts once a track is playing, so
+  // there is no server-rendered slider for this to disagree with.
+  const [volume, setVolumeState] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    try {
+      const v = parseFloat(localStorage.getItem("tf_volume") ?? "");
+      return isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+    } catch {
+      return 1;
+    }
+  });
+  const [muted, setMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("tf_muted") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const queueRef = useRef(queue);
-  queueRef.current = queue;
   const indexRef = useRef(index);
-  indexRef.current = index;
   const modeRef = useRef(mode);
-  modeRef.current = mode;
   const shuffleRef = useRef(shuffle);
-  shuffleRef.current = shuffle;
   const repeatRef = useRef(repeat);
-  repeatRef.current = repeat;
   const dlUrlRef = useRef(dlUrl);
-  dlUrlRef.current = dlUrl;
   const playedRef = useRef<Set<string>>(new Set());
   const errStreakRef = useRef(0);
   const refillingRef = useRef(false);
+
+  // Mirror the latest state into refs so the audio-event callbacks below — which
+  // are registered once and outlive any single render — never read stale values.
+  // Must stay the first effect: the load effect reads these on the same commit.
+  useEffect(() => {
+    queueRef.current = queue;
+    indexRef.current = index;
+    modeRef.current = mode;
+    shuffleRef.current = shuffle;
+    repeatRef.current = repeat;
+    dlUrlRef.current = dlUrl;
+  });
 
   const current = index >= 0 && index < queue.length ? queue[index] : null;
 
@@ -382,6 +415,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off"));
   }, []);
 
+  const setVolume = useCallback((v: number) => {
+    const clamped = Math.min(1, Math.max(0, v));
+    setVolumeState(clamped);
+    if (clamped > 0) setMuted(false);
+  }, []);
+
+  const toggleMute = useCallback(() => setMuted((m) => !m), []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume;
+      audio.muted = muted;
+    }
+    try {
+      localStorage.setItem("tf_volume", String(volume));
+      localStorage.setItem("tf_muted", muted ? "1" : "0");
+    } catch {
+      /* storage unavailable — volume just won't persist */
+    }
+  }, [volume, muted]);
+
   // Media Session (lock screen / headset buttons)
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
@@ -390,10 +445,66 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       navigator.mediaSession.setActionHandler("pause", () => toggle());
       navigator.mediaSession.setActionHandler("nexttrack", () => void next(false));
       navigator.mediaSession.setActionHandler("previoustrack", () => prev());
+      navigator.mediaSession.setActionHandler("seekto", (d) => {
+        if (typeof d.seekTime === "number") seek(d.seekTime);
+      });
     } catch {
-      /* ignore */
+      /* older browsers reject unknown actions */
     }
-  }, [toggle, next, prev]);
+  }, [toggle, next, prev, seek]);
+
+  // Feed the OS media panel a real scrubber instead of a bare play/pause pair.
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || !duration || !isFinite(duration)) return;
+    try {
+      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+      navigator.mediaSession.setPositionState({
+        duration,
+        position: Math.min(curTime, duration),
+        playbackRate: 1,
+      });
+    } catch {
+      /* setPositionState is unsupported on some engines */
+    }
+  }, [curTime, duration, playing]);
+
+  // Global shortcuts, ignored while the user is typing in a field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const audio = audioRef.current;
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          toggle();
+          break;
+        case "ArrowRight":
+          if (audio) seek(Math.min(audio.currentTime + 5, duration || audio.currentTime + 5));
+          break;
+        case "ArrowLeft":
+          if (audio) seek(Math.max(audio.currentTime - 5, 0));
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setVolume(volume + 0.05);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setVolume(volume - 0.05);
+          break;
+        case "m":
+        case "M":
+          toggleMute();
+          break;
+        default:
+          return;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle, seek, duration, volume, setVolume, toggleMute]);
 
   const nextPublic = useCallback((auto?: boolean) => void next(!!auto), [next]);
 
@@ -409,15 +520,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       mode,
       shuffle,
       repeat,
+      volume,
+      muted,
       playContext,
       toggle,
       next: nextPublic,
       prev,
       seek,
+      setVolume,
+      toggleMute,
       toggleShuffle,
       cycleRepeat,
     }),
-    [queue, index, current, playing, loading, curTime, duration, mode, shuffle, repeat, playContext, toggle, nextPublic, prev, seek, toggleShuffle, cycleRepeat],
+    [queue, index, current, playing, loading, curTime, duration, mode, shuffle, repeat, volume, muted, playContext, toggle, nextPublic, prev, seek, setVolume, toggleMute, toggleShuffle, cycleRepeat],
   );
 
   return (

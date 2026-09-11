@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { translate, LANGS } from "@/lib/i18n";
@@ -111,16 +112,21 @@ function loadSettings(): UserSettings {
   return DEFAULT_SETTINGS;
 }
 
-export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [regionInfo, setRegionInfo] = useState<RegionInfo | null>(null);
-  const [ready, setReady] = useState(false);
+const noopSubscribe = () => () => {};
 
-  useEffect(() => {
-    const s = loadSettings();
-    setSettings(s);
-    setReady(true);
-  }, []);
+export function AppStateProvider({ children }: { children: ReactNode }) {
+  // loadSettings() is SSR-safe, so the server gets defaults and the client gets
+  // stored values on its very first render — no reset pass.
+  const [settings, setSettings] = useState<UserSettings>(loadSettings);
+  const [regionInfo, setRegionInfo] = useState<RegionInfo | null>(null);
+
+  // False while server-rendering and during hydration, true afterwards. React
+  // drives the switch itself, so the two passes never disagree.
+  const ready = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (!ready) return;

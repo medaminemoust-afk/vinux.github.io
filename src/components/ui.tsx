@@ -93,7 +93,7 @@ export function Spinner({ className = "h-5 w-5" }: { className?: string }) {
 
 export function ErrBox({ onRetry, label }: { onRetry?: () => void; label: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm text-zinc-300">
+    <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm text-subdued">
       <span>{label}</span>
       {onRetry && (
         <button
@@ -109,11 +109,11 @@ export function ErrBox({ onRetry, label }: { onRetry?: () => void; label: string
 
 export function SkeletonCards({ n = 6 }: { n?: number }) {
   return (
-    <div className="flex gap-3 overflow-hidden">
+    <div className="flex gap-4 overflow-hidden">
       {Array.from({ length: n }).map((_, i) => (
-        <div key={i} className="w-36 shrink-0 space-y-2">
-          <div className="aspect-square animate-pulse rounded-xl bg-white/8" />
-          <div className="h-3 w-4/5 animate-pulse rounded bg-white/8" />
+        <div key={i} className="w-40 shrink-0 space-y-3 rounded-lg bg-card p-3">
+          <div className="aspect-square animate-pulse rounded bg-white/10" />
+          <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
           <div className="h-2.5 w-3/5 animate-pulse rounded bg-white/5" />
         </div>
       ))}
@@ -135,24 +135,22 @@ export function CoverCard({
   return (
     <button
       onClick={onPlay}
-      className="group w-36 shrink-0 cursor-pointer text-start focus:outline-none"
+      className="group w-40 shrink-0 cursor-pointer rounded-lg bg-card p-3 text-start transition-colors duration-200 hover:bg-card-hover focus:outline-none focus-visible:bg-card-hover"
       title={`${track.title} — ${track.artist}`}
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white/10 shadow-lg shadow-black/30">
+      <div className="relative aspect-square w-full overflow-hidden rounded bg-white/10 shadow-lg shadow-black/40">
         <img
           src={track.thumbnail}
           alt={track.title}
           loading="lazy"
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:opacity-60"
+          className="yt-thumb h-full w-full"
         />
-        <div className="absolute inset-0 flex items-end justify-end p-2 opacity-0 transition group-hover:opacity-100">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition hover:scale-110">
-            <Play className="ml-0.5 h-4 w-4 fill-current" />
-          </span>
-        </div>
+        <span className="absolute bottom-2 end-2 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+          <Play className="ms-0.5 h-5 w-5 fill-current" />
+        </span>
       </div>
-      <div className="mt-2 line-clamp-1 text-[13px] font-semibold text-zinc-100">{track.title}</div>
-      <div className="line-clamp-1 text-xs text-zinc-400">
+      <div className="mt-3 line-clamp-1 text-sm font-semibold text-white">{track.title}</div>
+      <div className="mt-1 line-clamp-1 text-xs text-subdued">
         {subtitle ?? track.artist} · {fmtDuration(track.duration)}
       </div>
     </button>
@@ -189,7 +187,7 @@ export function RowSong({
           src={track.thumbnail}
           alt=""
           loading="lazy"
-          className="h-full w-full object-cover"
+          className="yt-thumb h-full w-full"
         />
         <div
           className="absolute inset-0 hidden items-center justify-center bg-black/50 group-hover:flex"
@@ -202,15 +200,15 @@ export function RowSong({
         </div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className={cx("truncate text-sm font-medium", active ? "text-emerald-400" : "text-zinc-100")}>
+        <div className={cx("truncate text-sm font-medium", active ? "text-accent-bright" : "text-white")}>
           {track.title}
         </div>
-        <div className="truncate text-xs text-zinc-400">{track.artist}</div>
+        <div className="truncate text-xs text-subdued">{track.artist}</div>
       </div>
       {index !== undefined && (
-        <div className="hidden w-8 text-end text-xs tabular-nums text-zinc-500 sm:block">{index + 1}</div>
+        <div className="hidden w-8 text-end text-xs tabular-nums text-white/40 sm:block">{index + 1}</div>
       )}
-      <div className="shrink-0 text-xs tabular-nums text-zinc-500">{fmtDuration(track.duration)}</div>
+      <div className="shrink-0 text-xs tabular-nums text-white/40">{fmtDuration(track.duration)}</div>
       {trailing && (
         <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
           {trailing}
@@ -225,7 +223,7 @@ export function RowSong({
 export function bgStyle(url?: string): CSSProperties {
   if (!url) return {};
   return {
-    backgroundImage: `linear-gradient(rgba(10,10,18,0.82), rgba(10,10,18,0.97)), url(${url})`,
+    backgroundImage: `linear-gradient(rgba(18,18,18,0.82), rgba(18,18,18,0.97)), url(${url})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
   };
