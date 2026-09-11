@@ -12,7 +12,6 @@ const en: Dict = {
   "nav.editTaste": "Edit your artists & styles",
 
   // onboarding
-  "ob.welcome": "Welcome to Vinux",
   "ob.subtitle": "Pick your language — everything will be translated",
   "ob.chooseLang": "Choose your language",
   "ob.regionTitle": "Who do you love to listen to?",
@@ -24,7 +23,6 @@ const en: Dict = {
   "ob.continue": "Continue",
   "ob.finish": "Start listening",
   "ob.skip": "Skip for now",
-  "ob.maxArtists": "Maximum 5 artists",
 
   // regions
   "region.global": "Top worldwide",
@@ -61,7 +59,6 @@ const en: Dict = {
   "home.styleRadio": "radio",
   "home.trendingIn": "Trending in {region}",
   "home.globalHits": "Global hits right now",
-  "home.moreFrom": "More from {artist}",
   "home.retry": "Retry",
   "home.loadFailed": "Couldn't load this section",
   "home.playAll": "Play all",
@@ -89,14 +86,12 @@ const en: Dict = {
   "lib.tracks": "tracks",
   "lib.editTaste": "Edit taste",
   "lib.savedTo": "Saved to {name}",
-  "lib.removedFrom": "Removed from {name}",
 
   // player
   "pl.nowPlaying": "Now playing",
   "pl.queue": "Queue",
   "pl.lyrics": "Lyrics",
   "pl.noLyrics": "No lyrics found for this song",
-  "pl.playingFrom": "Playing from",
   "pl.download": "Download",
   "pl.downloaded": "Downloaded",
   "pl.downloading": "Downloading…",
@@ -145,7 +140,6 @@ const ar: Dict = {
   "nav.settings": "ذوقك",
   "nav.editTaste": "تعديل فنّانيك وأنماطك",
 
-  "ob.welcome": "مرحباً بك في Vinux",
   "ob.subtitle": "اختر لغتك — كل شيء سيُترجم",
   "ob.chooseLang": "اختر لغتك",
   "ob.regionTitle": "من تحب أن تستمع إليه؟",
@@ -157,7 +151,6 @@ const ar: Dict = {
   "ob.continue": "متابعة",
   "ob.finish": "ابدأ الاستماع",
   "ob.skip": "تخطَّ الآن",
-  "ob.maxArtists": "الحد الأقصى 5 فنّانين",
 
   "region.global": "الأكثر عالمياً",
   "region.africa": "أفريقيا",
@@ -191,7 +184,6 @@ const ar: Dict = {
   "home.styleRadio": "راديو",
   "home.trendingIn": "الرائج في {region}",
   "home.globalHits": "الأكثر رواجاً عالمياً الآن",
-  "home.moreFrom": "المزيد من {artist}",
   "home.retry": "إعادة المحاولة",
   "home.loadFailed": "تعذّر تحميل هذا القسم",
   "home.playAll": "تشغيل الكل",
@@ -217,13 +209,11 @@ const ar: Dict = {
   "lib.tracks": "أغنية",
   "lib.editTaste": "تعديل الذوق",
   "lib.savedTo": "حُفظت في {name}",
-  "lib.removedFrom": "أُزيلت من {name}",
 
   "pl.nowPlaying": "يُشغَّل الآن",
   "pl.queue": "قائمة الانتظار",
   "pl.lyrics": "الكلمات",
   "pl.noLyrics": "لا توجد كلمات لهذه الأغنية",
-  "pl.playingFrom": "التشغيل من",
   "pl.download": "تنزيل",
   "pl.downloaded": "تم التنزيل",
   "pl.downloading": "جارٍ التنزيل…",
@@ -271,7 +261,6 @@ const fr: Dict = {
   "nav.settings": "Vos goûts",
   "nav.editTaste": "Modifier artistes & styles",
 
-  "ob.welcome": "Bienvenue sur Vinux",
   "ob.subtitle": "Choisissez votre langue — tout sera traduit",
   "ob.chooseLang": "Choisissez votre langue",
   "ob.regionTitle": "Qui aimez-vous écouter ?",
@@ -283,7 +272,6 @@ const fr: Dict = {
   "ob.continue": "Continuer",
   "ob.finish": "Commencer l'écoute",
   "ob.skip": "Passer",
-  "ob.maxArtists": "Maximum 5 artistes",
 
   "region.global": "Top mondial",
   "region.africa": "Afrique",
@@ -317,7 +305,6 @@ const fr: Dict = {
   "home.styleRadio": "radio",
   "home.trendingIn": "Tendances en {region}",
   "home.globalHits": "Succès mondiaux du moment",
-  "home.moreFrom": "Plus de {artist}",
   "home.retry": "Réessayer",
   "home.loadFailed": "Impossible de charger cette section",
   "home.playAll": "Tout lire",
@@ -343,13 +330,11 @@ const fr: Dict = {
   "lib.tracks": "titres",
   "lib.editTaste": "Modifier mes goûts",
   "lib.savedTo": "Ajouté à {name}",
-  "lib.removedFrom": "Retiré de {name}",
 
   "pl.nowPlaying": "En cours de lecture",
   "pl.queue": "File d'attente",
   "pl.lyrics": "Paroles",
   "pl.noLyrics": "Aucune parole trouvée pour cette chanson",
-  "pl.playingFrom": "Lecture depuis",
   "pl.download": "Télécharger",
   "pl.downloaded": "Téléchargé",
   "pl.downloading": "Téléchargement…",
@@ -397,7 +382,6 @@ const es: Dict = {
   "nav.settings": "Tu gusto",
   "nav.editTaste": "Editar artistas y estilos",
 
-  "ob.welcome": "Bienvenido a Vinux",
   "ob.subtitle": "Elige tu idioma — todo estará traducido",
   "ob.chooseLang": "Elige tu idioma",
   "ob.regionTitle": "¿A quién te gusta escuchar?",
@@ -409,7 +393,6 @@ const es: Dict = {
   "ob.continue": "Continuar",
   "ob.finish": "Empezar a escuchar",
   "ob.skip": "Saltar",
-  "ob.maxArtists": "Máximo 5 artistas",
 
   "region.global": "Top mundial",
   "region.africa": "África",
@@ -443,7 +426,6 @@ const es: Dict = {
   "home.styleRadio": "radio",
   "home.trendingIn": "Tendencia en {region}",
   "home.globalHits": "Éxitos mundiales ahora",
-  "home.moreFrom": "Más de {artist}",
   "home.retry": "Reintentar",
   "home.loadFailed": "No se pudo cargar esta sección",
   "home.playAll": "Reproducir todo",
@@ -469,13 +451,11 @@ const es: Dict = {
   "lib.tracks": "temas",
   "lib.editTaste": "Editar gustos",
   "lib.savedTo": "Guardado en {name}",
-  "lib.removedFrom": "Eliminado de {name}",
 
   "pl.nowPlaying": "Reproduciendo",
   "pl.queue": "Cola",
   "pl.lyrics": "Letra",
   "pl.noLyrics": "No se encontró letra para esta canción",
-  "pl.playingFrom": "Reproduciendo desde",
   "pl.download": "Descargar",
   "pl.downloaded": "Descargado",
   "pl.downloading": "Descargando…",

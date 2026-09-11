@@ -67,7 +67,3 @@ export const favorites = pgTable(
     index("favorites_device_idx").on(t.deviceId),
   ],
 );
-
-export type Playlist = typeof playlists.$inferSelect;
-export type PlaylistTrack = typeof playlistTracks.$inferSelect;
-export type Favorite = typeof favorites.$inferSelect;

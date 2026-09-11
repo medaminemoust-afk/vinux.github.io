@@ -113,7 +113,3 @@ export async function searchSongs(query: string, limit = 24): Promise<Track[]> {
   }
   return out;
 }
-
-export function parseDurationFromText(text?: string): number | undefined {
-  return parseSongDuration(text);
-}

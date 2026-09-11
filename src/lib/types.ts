@@ -7,15 +7,6 @@ export interface Track {
   durationText?: string;
 }
 
-export interface TrackRow {
-  videoId: string;
-  title: string;
-  artist: string;
-  thumbnail: string;
-  duration: number | null;
-  durationText: string | null;
-}
-
 export interface RegionInfo {
   country: string;
   countryCode: string;

@@ -35,16 +35,6 @@ export async function idbPut(videoId: string, value: DownloadedSong): Promise<vo
   });
 }
 
-export async function idbGet(videoId: string): Promise<DownloadedSong | undefined> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, "readonly");
-    const req = tx.objectStore(STORE).get(videoId);
-    req.onsuccess = () => resolve(req.result as DownloadedSong | undefined);
-    req.onerror = () => reject(req.error);
-  });
-}
-
 export async function idbAll(): Promise<DownloadedSong[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {

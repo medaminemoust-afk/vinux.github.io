@@ -60,10 +60,6 @@ export function parseSongDuration(text?: string | null): number | undefined {
   return undefined;
 }
 
-export function toTrack(t: Track): Track {
-  return t;
-}
-
 export interface LyricLine {
   time: number;
   text: string;
