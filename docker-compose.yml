@@ -1,0 +1,67 @@
+# Portainer stack for Vinux.
+#
+# Required stack environment variables:
+#   GITHUB_REPOSITORY=medaminemoust-afk/vinux.github.io
+#   POSTGRES_PASSWORD=<choose one>
+#
+# Watchtower closes the loop: pushing to main publishes a new :latest, Watchtower
+# sees the digest change and redeploys the app by itself.
+#
+# No `version:` key — Compose V2 ignores it and warns that it is obsolete.
+
+services:
+  vinux:
+    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    container_name: vinux
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - DATABASE_URL=postgres://vinux:${POSTGRES_PASSWORD}@vinux-db:5432/vinux
+      - PORT=3000
+    restart: unless-stopped
+    networks:
+      - vinux-network
+    depends_on:
+      vinux-db:
+        condition: service_healthy
+    healthcheck:
+      # Uses node rather than wget/curl: the runtime image is node:bookworm-slim,
+      # which ships neither. Hits the page and not /api/health, because that route
+      # needs the database and would report the app down whenever postgres blinks.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  vinux-db:
+    image: postgres:17-alpine
+    container_name: vinux-db
+    environment:
+      - POSTGRES_USER=vinux
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=vinux
+    volumes:
+      - vinux-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - vinux-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vinux -d vinux"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      # Deliberately left out of Watchtower: restarting the database to pick up a
+      # patch release cuts playback for no gain, and an unattended major bump
+      # would leave the data directory unreadable. Upgrade this one by hand.
+      - "com.centurylinklabs.watchtower.enable=false"
+
+networks:
+  vinux-network:
+    driver: bridge
+
+volumes:
+  vinux-db-data:
