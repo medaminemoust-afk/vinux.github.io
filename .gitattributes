@@ -1,0 +1,14 @@
+# Normalise line endings so a clone behaves the same on every machine,
+# whatever core.autocrlf happens to be set to locally.
+* text=auto
+
+# cmd.exe parses batch files by byte offset and mis-reads LF-only files —
+# commands come out truncated ("setlocal" read as "tlocal"). These must stay CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts and anything the Linux container reads must stay LF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
