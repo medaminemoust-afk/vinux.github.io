@@ -25,6 +25,14 @@ services:
     environment:
       - PORT=3000
       # - DATABASE_URL=postgres://user:password@host:5432/vinux
+      # Access log: both must be set for it to record anything.
+      - ACCESS_LOG_ENABLED=${ACCESS_LOG_ENABLED:-0}
+      - ACCESS_LOG_PATH=/data/access.log
+      # 32+ random chars, e.g. `openssl rand -hex 24`. Unset = endpoint 404s.
+      - ACCESS_LOG_TOKEN=${ACCESS_LOG_TOKEN:-}
+    volumes:
+      # Named volume, so the log survives the redeploys Watchtower triggers.
+      - vinux-data:/data
     restart: unless-stopped
     networks:
       - vinux-network
@@ -42,3 +50,6 @@ services:
 networks:
   vinux-network:
     driver: bridge
+
+volumes:
+  vinux-data:

@@ -36,6 +36,12 @@ RUN apt-get update \
 RUN groupadd --system --gid 1001 nodejs \
  && useradd --system --uid 1001 --gid nodejs nextjs
 
+# Access log lives here. Created and owned up front so a volume mounted over it
+# inherits the ownership — the server runs as uid 1001 and a root-owned mount
+# point would make every write fail silently.
+RUN mkdir -p /data && chown nextjs:nodejs /data
+VOLUME ["/data"]
+
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

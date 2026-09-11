@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import type { RegionInfo } from "@/lib/types";
+import { logAccess } from "@/lib/server/accessLog";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 interface GeoResult {
   success?: boolean;
@@ -150,5 +152,21 @@ export async function GET(req: Request) {
     regionKey,
     flag: FLAGS[(geo?.country_code || "").toUpperCase()] || "🌐",
   };
+
+  // The client calls this once when the app boots, and the address is already
+  // resolved here — so one line per visit lands for free. Fire-and-forget:
+  // logAccess never rejects, and geo must not wait on a disk write.
+  if (process.env.ACCESS_LOG_ENABLED === "1") {
+    logAccess({
+      at: new Date().toISOString(),
+      ip: ip || "private",
+      country: info.country,
+      countryCode: info.countryCode,
+      region: regionKey,
+      path: new URL(req.url).pathname,
+      ua: (req.headers.get("user-agent") || "").slice(0, 200),
+    });
+  }
+
   return NextResponse.json(info);
 }
